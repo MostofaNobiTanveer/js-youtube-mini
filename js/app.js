@@ -87,3 +87,111 @@ const displayVideo = (videoId, title) => {
   `;
   displayVideoContainer.insertAdjacentHTML("beforeend", videoDisplayHtml);
 };
+
+(function () {
+  function getCurrentScript() {
+    if (document.currentScript) {
+      return document.currentScript;
+    }
+    var scripts = document.getElementsByTagName('script');
+    return scripts[scripts.length - 1];
+  }
+
+  function getEmbedPlaceholder() {
+    var script = getCurrentScript();
+    var matches = String(script.src).match(/id=([0-9]+)/);
+    var placeholder = matches
+      ? document.querySelector('[data-embed-placeholder="' + matches[1] + '"]')
+      : null;
+    if (placeholder) {
+      return placeholder;
+    }
+    return script;
+  }
+
+  function insertBefore(newElement, referenceElement) {
+    referenceElement.parentNode.insertBefore(newElement, referenceElement);
+  }
+
+  function createFrame(url, height, borderRadius, border, shadow) {
+    var iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.style.cssText =
+      'width: 100% !important; max-width: 100% !important; vertical-align: top !important; border: ' +
+      (border ? border.width : '0') +
+      'px solid ' +
+      (border ? border.color : 'transparent') +
+      ' !important; border-radius: ' +
+      borderRadius +
+      'px !important; box-shadow: ' +
+      (shadow ? shadow.x : '0') +
+      'px ' +
+      (shadow ? shadow.y : '0') +
+      'px ' +
+      (shadow ? shadow.blur : '0') +
+      'px ' +
+      (shadow ? shadow.spread : '0') +
+      'px ' +
+      (shadow ? shadow.color : 'transparent') +
+      ' !important; box-sizing: border-box !important;';
+
+    // sets dynamicly height of container for list widget
+    function setHeight(dynamicHeight, maximumHeight, widgetType) {
+      var newHeight = null;
+      if (widgetType === 'carousel') {
+        newHeight = dynamicHeight;
+      } else if (dynamicHeight < maximumHeight) {
+        newHeight = dynamicHeight;
+      } else {
+        newHeight = maximumHeight;
+      }
+      iframe.style.setProperty('max-height', newHeight + 'px', 'important');
+      iframe.style.setProperty('height', newHeight + 'px', 'important');
+    }
+    // post message listener
+    window.addEventListener(
+      'message',
+      (event) => {
+        var result = Object(event.data);
+        var { data, type, widgetType } = result;
+        if (type === 'widgetheight') {
+          setHeight(data.height, height, widgetType);
+        }
+      },
+      false
+    );
+    return iframe;
+  }
+
+  try {
+    var displayContainerBorder = false;
+    var displayContainerShadow = false;
+    insertBefore(
+      createFrame(
+        'https://js-youtube.netlify.app',
+        '2800',
+        '5',
+        displayContainerBorder
+          ? {
+              width: '0',
+              color: '#E0E0E0',
+            }
+          : null,
+        displayContainerShadow
+          ? {
+              x: '0',
+              y: '0',
+              blur: '0',
+              spread: '0',
+              color: '#E0E0E0',
+            }
+          : null
+      ),
+      getEmbedPlaceholder()
+    );
+  } catch (error) {
+    if (console) {
+      console.warn(error);
+    }
+  }
+})();
